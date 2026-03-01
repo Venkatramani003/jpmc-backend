@@ -16,28 +16,26 @@ import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
 public class SuperMarketServiceImpl implements SuperMarketService {
-    private final Logger logger = LoggerFactory.getLogger(SuperMarketServiceImpl.class);
+	private final Logger logger = LoggerFactory.getLogger(SuperMarketServiceImpl.class);
     private final SuperMarketRepo superMarketRepo;
     private final CartRepo cartRepo;
 
-	
     @Override
     public List<SuperMarket> getAllItems() {
-    	logger.info("getting All Item");
+    	
         return superMarketRepo.findAll();
     }
 
     @Override
     public SuperMarket getItemById(int itemNo) {
-        logger.info("getting Item By Id");
+    	logger.info("getting Item By Id");
         return superMarketRepo.findById(itemNo).orElseThrow(() -> new RuntimeException("Item not found: " + itemNo));
     }
 
     @Override
     public SuperMarket addItem(SuperMarket item) {
-        logger.info("Item Added");
+    	logger.info("Item Added");
         return superMarketRepo.save(item);
     }
 
@@ -52,24 +50,24 @@ public class SuperMarketServiceImpl implements SuperMarketService {
 
     @Override
     public void deleteItem(int itemNo) {
-        logger.info("Item Deleted");
+    	logger.info("Item Deleted");
         cartRepo.deleteById((long) itemNo);
     }
-
+    
     @Override
     public Optional<Cart> getCartItem(int itemNo) {
-        return cartRepo.findById((long) itemNo);
+    	return cartRepo.findById((long) itemNo);
     }
     @Override
     public Cart addToCart(int itemNo, int quantity) {
         SuperMarket item = getItemById(itemNo);
-
+        
         Optional<Cart> existingCartEntry = cartRepo.findByItem_ItemNo(itemNo);
 
         Cart cartEntry;
         if (existingCartEntry.isPresent()) {
             cartEntry = existingCartEntry.get();
-            cartEntry.setQuantity(cartEntry.getQuantity() + quantity);
+            cartEntry.setQuantity(cartEntry.getQuantity() + quantity); 
             logger.info("Item quantity updated in cart");
         } else {
             cartEntry = new Cart();
@@ -84,7 +82,7 @@ public class SuperMarketServiceImpl implements SuperMarketService {
 
     @Override
     public List<Cart> getCartItems() {
-        logger.info("Get Cart Items");
+    	logger.info("Get Cart Items");
         return cartRepo.findAll();
     }
 
@@ -94,16 +92,18 @@ public class SuperMarketServiceImpl implements SuperMarketService {
         float total = 0.0f;
 //        StringBuilder sb = new StringBuilder();
         List<Float> Result = new ArrayList<Float>();
-
-        for (Cart cart : cartItems) {
-            float lineTotal = cart.getQuantity() * cart.getItem().getPrice();
-//            sb.append(cart.getItem().getItemName())
-//              .append(" x ").append(cart.getQuantity())
-//              .append(" = Rs. ").append(lineTotal).append("\n");
-            total += lineTotal;
-        }
+//        
+//        for (Cart cart : cartItems) {
+//            float lineTotal = cart.getQuantity() * cart.getItem().getPrice();
+////            sb.append(cart.getItem().getItemName())
+////              .append(" x ").append(cart.getQuantity())
+////              .append(" = Rs. ").append(lineTotal).append("\n");
+//            total += lineTotal;
+//        }
+        total = cartItems.stream().map(i->i.getQuantity()*i.getItem().getPrice()).reduce(0.0f, Float::sum);
+        GST calcGst = (float x)->x*0.18f;
         Result.add(total);
-        float gst = total * 0.18f;
+        float gst = calcGst.calculateGST(total);
         Result.add(gst);
         Result.add(total+gst);
 //        sb.append("------------------\n");
@@ -114,5 +114,11 @@ public class SuperMarketServiceImpl implements SuperMarketService {
 //        return sb.toString();
         logger.info("Get Checkout details");
         return Result;
+    }
+    
+    @Override
+    public void deleteAllItem() {
+    	logger.info("All Item Deleted");
+        cartRepo.deleteAll();
     }
 }

@@ -7,7 +7,7 @@ import java.util.Optional;
 import com.cts.jpmcpresonal.model.*;
 
 public interface SuperMarketService {
-    List<SuperMarket> getAllItems();
+	List<SuperMarket> getAllItems();
     SuperMarket getItemById(int itemNo);
     SuperMarket addItem(SuperMarket item);
     SuperMarket updateItem(int itemNo, SuperMarket item);
@@ -16,4 +16,6 @@ public interface SuperMarketService {
     Cart addToCart(int itemNo, int quantity);
     List<Cart> getCartItems();
     List<Float> checkout();
+    void deleteAllItem();
+    
 }

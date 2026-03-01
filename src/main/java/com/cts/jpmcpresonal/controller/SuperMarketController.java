@@ -1,32 +1,31 @@
 package com.cts.jpmcpresonal.controller;
-
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.List;
 
 import java.util.Optional;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import com.cts.jpmcpresonal.model.Cart;
 import com.cts.jpmcpresonal.model.SuperMarket;
 import com.cts.jpmcpresonal.service.SuperMarketService;
+import com.itextpdf.kernel.pdf.PdfDocument;
+import com.itextpdf.kernel.pdf.PdfWriter;
+import com.itextpdf.layout.Document;
+import com.itextpdf.layout.element.Paragraph;
+import com.itextpdf.layout.element.Table;
 
-import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/supermarket")
-//@RequiredArgsConstructor
-@AllArgsConstructor
-@NoArgsConstructor
+@RequiredArgsConstructor
 public class SuperMarketController {
-	@Autowired
-    public SuperMarketService service;
-	
-	@GetMapping
-	public String Status() {
-		return "Application is Successfully running...";
-	}
+
+    private final SuperMarketService service;
+
     @GetMapping("/items")
     public List<SuperMarket> getAllItems() {
         return service.getAllItems();
@@ -58,7 +57,48 @@ public class SuperMarketController {
     }
     
     @DeleteMapping("/cart/remove/{itemNo}")
-    public void RemoveItemFromCart(@PathVariable int itemNo) {
+    public void removeItemFromCart(@PathVariable int itemNo) {
     	service.deleteItem(itemNo);
+    }
+    @GetMapping("/receipt")
+    public void generateReceipt(HttpServletResponse response) throws IOException {
+        response.setContentType("application/pdf");
+        response.setHeader("Content-Disposition", "attachment; filename=\"receipt.pdf\"");
+
+        try (OutputStream os = response.getOutputStream()) {
+            PdfWriter writer = new PdfWriter(os);
+            PdfDocument pdfDoc = new PdfDocument(writer);
+            Document doc = new Document(pdfDoc);
+            float[] colomnWidth = {100F, 100F, 100F, 100F, 100F};
+            Table table = new Table(colomnWidth);
+            table.addHeaderCell("SNO");
+            table.addHeaderCell("ITEM NAME");
+            table.addHeaderCell("ITEM PRICE");
+            table.addHeaderCell("QUANTITY");
+            table.addHeaderCell("TOTAL");
+            List<Cart> cart = service.getCartItems();
+            List<Float> checkout = service.checkout();
+            for(Cart c:cart) {
+            	table.addCell(String.valueOf(c.getId()));
+            	table.addCell(String.valueOf(c.getItem().getItemName()));
+            	table.addCell(String.valueOf(c.getItem().getPrice()));
+            	table.addCell(String.valueOf(c.getQuantity()));
+            	table.addCell(String.valueOf(c.getQuantity()*c.getItem().getPrice()));
+            }
+            
+            doc.add(table);
+            float[] colomnWidthTwo = {100F, 100F};
+            Table tableTwo = new Table(colomnWidthTwo);
+            tableTwo.addCell("Sub Total");
+            tableTwo.addCell(String.valueOf(checkout.get(0)));
+            tableTwo.addCell("GST");
+            tableTwo.addCell(String.valueOf(checkout.get(1)));
+            tableTwo.addCell("Total");
+            tableTwo.addCell(String.valueOf(checkout.get(2)));
+            doc.add(new Paragraph(""));
+            doc.add(tableTwo);
+            doc.close();
+            service.deleteAllItem();
+        }
     }
 }
